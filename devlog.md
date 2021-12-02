@@ -52,4 +52,12 @@ After browsing [mediasoup DirectTransport](https://docs.rs/mediasoup/0.9.0/media
 
 # Devlog
 
-Ran into issues building mediasoup on windows. The mediasoup Makefile requires a bash-aware make (i.e. cygwin make). Building with the `scoop`-installed gnuwin32 make fails since it uses `cmd.exe` for shell commands. It looks like this is a [known issue](https://github.com/versatica/mediasoup/issues/701). Generally I prefer WSL to cygwin so I switched to developing inside of a Debian WSL instance as opposed to cygwin.
+- Ran into issues building mediasoup on windows. The mediasoup Makefile requires a bash-aware make (i.e. cygwin make). Building with the `scoop`-installed gnuwin32 make fails since it uses `cmd.exe` for shell commands. It looks like this is a [known issue](https://github.com/versatica/mediasoup/issues/701). Generally I prefer WSL to cygwin so I switched to developing inside of a Debian WSL instance as opposed to cygwin. WSL compilation worked after `sudo apt install python3-pip` 🎉
+
+- Error compiling initial example
+
+  ```
+  the trait `actix::actor::Actor` is not implemented for `EchoConnection`
+  ```
+
+  Caused because `actix-web-actors -> actix` version (0.10) mismatched latest `actix` version (0.12) that was added to our crate by `cargo add`. Solved by downgrading `actix` to 0.10 in our `Cargo.toml`.
