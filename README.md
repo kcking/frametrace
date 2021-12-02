@@ -49,3 +49,7 @@ Cons
 # Initially Chosen Approach
 
 After browsing [mediasoup DirectTransport](https://docs.rs/mediasoup/0.9.0/mediasoup/router/struct.Router.html#method.create_direct_transport), this seemed like a very ergonomic way to shim into the decrypted RTP stream. As for depacketizing the vp8 frames, I plan on using [webrtc.rs's implementation](https://docs.rs/rtp/latest/rtp/codecs/vp8/struct.Vp8Packet.html). Then the actual VP8 frames must be parsed to extract the relevant information. An initial search didn't bring up any existing crates to do this, so I may implement the parsing I need using [`nom`](https://crates.io/crates/nom) and the [VP8 RFC](https://datatracker.ietf.org/doc/html/rfc6386#section-19.2).
+
+# Devlog
+
+Ran into issues building mediasoup on windows. The mediasoup Makefile requires a bash-aware make (i.e. cygwin make). Building with the `scoop`-installed gnuwin32 make fails since it uses `cmd.exe` for shell commands. It looks like this is a [known issue](https://github.com/versatica/mediasoup/issues/701). Generally I prefer WSL to cygwin so I switched to developing inside of a Debian WSL instance as opposed to cygwin.
