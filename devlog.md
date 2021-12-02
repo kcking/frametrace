@@ -62,4 +62,4 @@ After browsing [mediasoup DirectTransport](https://docs.rs/mediasoup/0.9.0/media
 
   Caused because `actix-web-actors -> actix` version (0.10) mismatched latest `actix` version (0.12) that was added to our crate by `cargo add`. Solved by downgrading `actix` to 0.10 in our `Cargo.toml`.
 
-- Echo example failed to receive video. After some debugging it looks like WSL [doesn't support UDP](https://github.com/microsoft/WSL/issues/6082), with some not super great [workarounds](https://github.com/microsoft/WSL/issues/4825). Perhaps I will bite the bullet and see if Cygwin just works TM.
+- Echo example failed to receive video. After some debugging it looks like WSL [doesn't support UDP](https://github.com/microsoft/WSL/issues/6082), with some not super great [workarounds](https://github.com/microsoft/WSL/issues/4825). Since WSL can run GUI apps, I also tried running an in-WSL chromium, but WSL doesn't have access to the webcam so I couldn't produce a video stream. I could in theory create a synthetic one using canvas. Perhaps I will bite the bullet and see if Cygwin just works TM.
