@@ -1,53 +1,47 @@
 #[derive(Debug)]
 pub struct FrameTag {
-    frame_type: FrameTagType,
-    version: u8, // 3 bits
-    show_frame: bool,
-    first_part_size: u32, // 19 bits
+    pub frame_type: FrameTagType,
+    pub version: u8, // 3 bits
+    pub show_frame: bool,
+    pub first_part_size: u32, // 19 bits
 }
 
-use bitvec::prelude::*;
-use nom_bitvec::BSlice;
-
-type Bits<'a> = BSlice<'a, Msb0, u8>;
-use nom::bytes::complete::{tag, take};
+use nom::{
+    bytes::complete::{self, tag, take},
+    number::{
+        self,
+        complete::{be_u16, be_u24, le_u16, le_u24},
+    },
+};
 
 impl FrameTag {
-    pub fn parse(data: Bits) -> nom::IResult<Bits, Self> {
-        let first_24 = take(24usize)(data)?.1;
-        dbg!(first_24, first_24.0.get(0));
+    pub fn parse(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        //  https://datatracker.ietf.org/doc/html/rfc6386#section-19.1
+        let (data, tmp) = le_u24(data)?;
+        //  A 1-bit frame type (0 for key frames, 1 for interframes).
+        let key_frame = (tmp & 0x1) == 0;
+        let version = ((tmp >> 1) & 0x7) as u8;
+        let show_frame = ((tmp >> 4) & 0x1) == 1;
+        let first_part_size = (tmp >> 5) & 0x7FFFF;
 
-        // panic!("done");
-        //  TODO: endianness?
-        let (data, keyframe_bit) = take(1usize)(data)?;
+        let (data, frame_type) = if key_frame {
+            let (data, _start_code) = nom::bytes::complete::tag(&[0x9du8, 0x01, 0x2a])(data)?;
 
-        let (data, version) = take(3usize)(data)?;
+            let (data, tmp) = be_u16(data)?;
+            let width = tmp & 0x3FFF;
+            let width_scale = (tmp >> 14) as u8;
 
-        let (data, show_frame) = take(1usize)(data)?;
+            let (data, tmp) = be_u16(data)?;
+            let height = tmp & 0x3FFF;
+            let height_scale = (tmp >> 14) as u8;
 
-        let (data, first_part_size) = take(19usize)(data)?;
-
-        let (data, frame_type) = if keyframe_bit.0.get(0).map(|r| *r).unwrap_or(false) {
-            let (data2, start_code) = take(24usize)(data)?;
-            let expected_start_code = vec![0x9du8, 0x01, 0x2a]
-                .into_iter()
-                .rev()
-                .collect::<Vec<_>>();
-            let start_tag = BitSlice::<Lsb0, u8>::from_slice(&expected_start_code).unwrap();
-            dbg!(start_code);
-            dbg!(start_tag);
-            let (data, _start_code) = tag(BSlice(start_tag))(data)?;
-            let (data, width) = take(14usize)(data)?;
-            let (data, width_scale) = take(2usize)(data)?;
-            let (data, height) = take(14usize)(data)?;
-            let (data, height_scale) = take(2usize)(data)?;
             (
                 data,
                 FrameTagType::KeyFrame {
-                    width: width.0.load_le(),
-                    width_scale: width_scale.0.load_le(),
-                    height: height.0.load_le(),
-                    height_scale: height_scale.0.load_le(),
+                    width,
+                    width_scale,
+                    height,
+                    height_scale,
                 },
             )
         } else {
@@ -57,9 +51,9 @@ impl FrameTag {
         Ok((
             data,
             Self {
-                version: version.0.load_le(),
-                show_frame: show_frame.0.get(0).map(|r| *r).unwrap_or(false),
-                first_part_size: first_part_size.0.load_le(),
+                version,
+                show_frame,
+                first_part_size,
                 frame_type,
             },
         ))

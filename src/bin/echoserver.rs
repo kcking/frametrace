@@ -373,26 +373,28 @@ impl Handler<ClientMessage> for EchoConnection {
                             {
                                 println!("tracer consumer created: {:?}", tracer_consumer.id());
                                 let handler = tracer_consumer.on_rtp(|pkt| {
-                                    println!("got rtp pkt of len {}", pkt.len());
+                                    // println!("got rtp pkt of len {}", pkt.len());
                                     let mut buf = bytes::Bytes::from(pkt.to_vec());
                                     if let Ok(parsed_rtp) = rtp::packet::Packet::unmarshal(&mut buf)
                                     {
-                                        dbg!(parsed_rtp.header);
+                                        // dbg!(parsed_rtp.header.sequence_number);
                                         let mut vp8_pkt = Vp8Packet::default();
                                         if let Ok(vp8_frame) = vp8_pkt.depacketize(
                                             &bytes::Bytes::from(parsed_rtp.payload.to_vec()),
                                         ) {
-                                            dbg!(&vp8_pkt);
-                                            let slice = &vp8_frame[..];
-                                            //  TODO: we have to be careful with view_bits inferring bit order. we might have to convert endianness somehow when converting input slice to a bitvec, separate from the parsing code
-                                            dbg!(&slice.view_bits::<Msb0>()[..48]);
-                                            dbg!(&slice.view_bits::<bitvec::order::Lsb0>()[..48]);
-                                            let parsed = frametrace::FrameTag::parse(BSlice(
-                                                slice.view_bits::<Msb0>(),
-                                            ))
-                                            .finish();
-                                            if let Ok(parsed) = parsed {
-                                                dbg!(&parsed.1);
+                                            if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
+                                                // dbg!(&vp8_pkt);
+                                                let slice = &vp8_frame[..];
+                                                let parsed =
+                                                    frametrace::FrameTag::parse(slice).finish();
+                                                if let Ok(parsed) = parsed {
+                                                    if matches!(
+                                                        parsed.1.frame_type,
+                                                        frametrace::FrameTagType::KeyFrame { .. }
+                                                    ) {
+                                                        dbg!(&parsed.1);
+                                                    }
+                                                }
                                             }
                                         }
                                     }
