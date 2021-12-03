@@ -27,11 +27,11 @@ impl FrameTag {
         let (data, frame_type) = if key_frame {
             let (data, _start_code) = nom::bytes::complete::tag(&[0x9du8, 0x01, 0x2a])(data)?;
 
-            let (data, tmp) = be_u16(data)?;
+            let (data, tmp) = le_u16(data)?;
             let width = tmp & 0x3FFF;
             let width_scale = (tmp >> 14) as u8;
 
-            let (data, tmp) = be_u16(data)?;
+            let (data, tmp) = le_u16(data)?;
             let height = tmp & 0x3FFF;
             let height_scale = (tmp >> 14) as u8;
 

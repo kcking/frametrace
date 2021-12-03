@@ -73,3 +73,9 @@ After browsing [mediasoup DirectTransport](https://docs.rs/mediasoup/0.9.0/media
 - Making some changes to the mediasoup build.rs and Makefile, I made it work on Windows. Only compiling on cmd.exe worked for me (after setting vcvars as mediasoup instructs). Powershell didn't handle mixed file path slashes (/ \\) correctly. Now the build works with `cmd.exe` and scoop-installed `python` and `make`.
 
 - With the build working, I ended up running into the same connectivity issue as before. I looked at chrome://webrtc-internals and saw that nothing was even being sent. Then I realized ICE was failing. The client was gathering candidates for 192.\* and 172.\*, but the echo server was only listening on localhost. Hard-coding listening on my 192.\* address fixed this issue, but I will probably find a programmatic way to get the local IPs. I was surprised mediasoup's client library didn't log any errors in this case. I tried adding some event listeners to the transport/producer and didn't have any luck surfacing this ICE failure client-side.
+
+- Decided to write own VP8 parser after not finding anything in rust-land. Got stuck for a while on the fact that the keyframe header bit is an _inverse_ bit (0 = keyframe, 1 = interframe). Maybe it should be called a not_key_frame bit ;)
+
+
+
+
