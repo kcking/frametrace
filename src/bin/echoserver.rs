@@ -126,6 +126,7 @@ enum InternalMessage {
 struct Transports {
     consumer: WebRtcTransport,
     producer: WebRtcTransport,
+    tracer: DirectTransport,
 }
 
 /// Actor that will represent WebSocket connection from the client, it will handle inbound and
@@ -207,6 +208,11 @@ impl EchoConnection {
             .await
             .map_err(|error| format!("Failed to create consumer transport: {}", error))?;
 
+        let tracer_transport = router
+            .create_direct_transport(DirectTransportOptions::default())
+            .await
+            .map_err(|error| format!("Failed to create tracer transport: {}", error))?;
+
         Ok(Self {
             client_rtp_capabilities: None,
             consumers: HashMap::new(),
@@ -215,6 +221,7 @@ impl EchoConnection {
             transports: Transports {
                 consumer: consumer_transport,
                 producer: producer_transport,
+                tracer: tracer_transport,
             },
         })
     }
@@ -324,6 +331,9 @@ impl Handler<ClientMessage> for EchoConnection {
             } => {
                 let address = ctx.address();
                 let transport = self.transports.producer.clone();
+
+                let tracer_transport = self.transports.tracer.clone();
+                let rtp_caps = self.client_rtp_capabilities.clone().unwrap();
                 // Use producer transport to create a new producer on the server with given RTP
                 // parameters
                 actix::spawn(async move {
@@ -338,6 +348,19 @@ impl Handler<ClientMessage> for EchoConnection {
                             // destroyed as soon as its instance goes out out scope
                             address.do_send(InternalMessage::SaveProducer(producer));
                             println!("{:?} producer created: {}", kind, id);
+
+                            if let Ok(tracer_consumer) = tracer_transport
+                                .consume(ConsumerOptions::new(id, rtp_caps))
+                                .await
+                            {
+                                println!("tracer consumer created: {:?}", tracer_consumer.id());
+                                let handler = tracer_consumer.on_rtp(|pkt| {
+                                    println!("got rtp pkt of len {}", pkt.len());
+                                });
+
+                                std::mem::forget(tracer_consumer);
+                                std::mem::forget(handler);
+                            }
                         }
                         Err(error) => {
                             eprintln!("Failed to create {:?} producer: {}", kind, error);
