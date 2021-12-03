@@ -180,15 +180,22 @@ impl EchoConnection {
         // We know that for echo example we'll need 2 transports, so we can create both right away.
         // This may not be the case for real-world applications or you may create this at a
         // different time and/or in different order.
-        let ips = TransportListenIps::new(TransportListenIp {
-            ip: "127.0.0.1".parse().unwrap(),
-            announced_ip: None,
-        })
-        .insert(TransportListenIp {
-            //  TODO: detect local IPs
-            ip: "192.168.1.38".parse().unwrap(),
+        let network_interfaces = get_if_addrs::get_if_addrs().map_err(|e| e.to_string())?;
+        let mut network_interfaces = network_interfaces.iter();
+
+        let mut ips = TransportListenIps::new(TransportListenIp {
+            ip: network_interfaces
+                .next()
+                .ok_or("No network interfaces".to_string())?
+                .ip(),
             announced_ip: None,
         });
+        for additional_interface in network_interfaces {
+            ips = ips.insert(TransportListenIp {
+                ip: additional_interface.ip(),
+                announced_ip: None,
+            });
+        }
         let transport_options = WebRtcTransportOptions::new(ips);
         let producer_transport = router
             .create_webrtc_transport(transport_options.clone())
