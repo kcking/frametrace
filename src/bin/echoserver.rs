@@ -4,6 +4,7 @@ use actix_web::web::{Data, Payload};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use mediasoup::prelude::*;
+use mediasoup::rtp_parameters::MimeType;
 use mediasoup::worker::{WorkerLogLevel, WorkerLogTag};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -349,8 +350,19 @@ impl Handler<ClientMessage> for EchoConnection {
                             address.do_send(InternalMessage::SaveProducer(producer));
                             println!("{:?} producer created: {}", kind, id);
 
+                            let mut vp8_only_caps = rtp_caps.clone();
+                            vp8_only_caps.codecs.retain(|codec| {
+                                matches!(
+                                    codec,
+                                    RtpCodecCapability::Video {
+                                        mime_type: MimeTypeVideo::Vp8,
+                                        ..
+                                    }
+                                )
+                            });
+
                             if let Ok(tracer_consumer) = tracer_transport
-                                .consume(ConsumerOptions::new(id, rtp_caps))
+                                .consume(ConsumerOptions::new(id, vp8_only_caps))
                                 .await
                             {
                                 println!("tracer consumer created: {:?}", tracer_consumer.id());
