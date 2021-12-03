@@ -374,6 +374,9 @@ impl Handler<ClientMessage> for EchoConnection {
                                         vp8_pkt.depacketize(&bytes::Bytes::from(pkt.to_vec()))
                                     {
                                         dbg!(&vp8_pkt);
+                                        let slice = &vp8_frame[..];
+                                        let parsed = frametrace::FrameTag::parse((slice, 0));
+                                        dbg!(&parsed);
                                     }
                                 });
 
