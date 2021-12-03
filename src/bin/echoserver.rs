@@ -38,7 +38,7 @@ fn media_codecs() -> Vec<RtpCodecCapability> {
 
 /// Data structure containing all the necessary information about transport options required from
 /// the server to establish transport connection on the client
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct TransportOptions {
     id: TransportId,
@@ -48,7 +48,7 @@ struct TransportOptions {
 }
 
 /// Server messages sent to the client
-#[derive(Serialize, Message)]
+#[derive(Serialize, Message, Debug)]
 #[serde(tag = "action")]
 #[rtype(result = "()")]
 enum ServerMessage {
@@ -180,11 +180,16 @@ impl EchoConnection {
         // We know that for echo example we'll need 2 transports, so we can create both right away.
         // This may not be the case for real-world applications or you may create this at a
         // different time and/or in different order.
-        let transport_options =
-            WebRtcTransportOptions::new(TransportListenIps::new(TransportListenIp {
-                ip: "127.0.0.1".parse().unwrap(),
-                announced_ip: None,
-            }));
+        let ips = TransportListenIps::new(TransportListenIp {
+            ip: "127.0.0.1".parse().unwrap(),
+            announced_ip: None,
+        })
+        .insert(TransportListenIp {
+            //  TODO: detect local IPs
+            ip: "192.168.1.38".parse().unwrap(),
+            announced_ip: None,
+        });
+        let transport_options = WebRtcTransportOptions::new(ips);
         let producer_transport = router
             .create_webrtc_transport(transport_options.clone())
             .await
