@@ -4,8 +4,9 @@ use actix_web::web::{Data, Payload};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use mediasoup::prelude::*;
-use mediasoup::rtp_parameters::MimeType;
 use mediasoup::worker::{WorkerLogLevel, WorkerLogTag};
+use rtp::codecs::vp8::Vp8Packet;
+use rtp::packetizer::Depacketizer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::num::{NonZeroU32, NonZeroU8};
@@ -368,8 +369,15 @@ impl Handler<ClientMessage> for EchoConnection {
                                 println!("tracer consumer created: {:?}", tracer_consumer.id());
                                 let handler = tracer_consumer.on_rtp(|pkt| {
                                     println!("got rtp pkt of len {}", pkt.len());
+                                    let mut vp8_pkt = Vp8Packet::default();
+                                    if let Ok(vp8_frame) =
+                                        vp8_pkt.depacketize(&bytes::Bytes::from(pkt.to_vec()))
+                                    {
+                                        dbg!(&vp8_pkt);
+                                    }
                                 });
 
+                                //  TODO: manage lifecycle of these
                                 std::mem::forget(tracer_consumer);
                                 std::mem::forget(handler);
                             }
