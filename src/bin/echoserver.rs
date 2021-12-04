@@ -373,17 +373,14 @@ impl Handler<ClientMessage> for EchoConnection {
                             {
                                 println!("tracer consumer created: {:?}", tracer_consumer.id());
                                 let handler = tracer_consumer.on_rtp(|pkt| {
-                                    // println!("got rtp pkt of len {}", pkt.len());
                                     let mut buf = bytes::Bytes::from(pkt.to_vec());
                                     if let Ok(parsed_rtp) = rtp::packet::Packet::unmarshal(&mut buf)
                                     {
-                                        // dbg!(parsed_rtp.header.sequence_number);
                                         let mut vp8_pkt = Vp8Packet::default();
                                         if let Ok(vp8_frame) = vp8_pkt.depacketize(
                                             &bytes::Bytes::from(parsed_rtp.payload.to_vec()),
                                         ) {
                                             if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
-                                                // dbg!(&vp8_pkt);
                                                 let slice = &vp8_frame[..];
                                                 let parsed =
                                                     frametrace::FrameTag::parse(slice).finish();

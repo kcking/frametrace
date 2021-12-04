@@ -6,13 +6,7 @@ pub struct FrameTag {
     pub first_part_size: u32, // 19 bits
 }
 
-use nom::{
-    bytes::complete::{self, tag, take},
-    number::{
-        self,
-        complete::{be_u16, be_u24, le_u16, le_u24},
-    },
-};
+use nom::number::complete::{le_u16, le_u24};
 
 impl FrameTag {
     pub fn parse(data: &[u8]) -> nom::IResult<&[u8], Self> {
