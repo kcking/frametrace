@@ -391,6 +391,15 @@ impl Handler<ClientMessage> for EchoConnection {
                                                     ) {
                                                         dbg!(&parsed.1);
                                                     }
+
+                                                    if let Ok(frame_header) =
+                                                        frametrace::FrameHeader::parse(
+                                                            parsed.1.frame_type,
+                                                            parsed.0,
+                                                        )
+                                                    {
+                                                        dbg!(frame_header.1);
+                                                    }
                                                 }
                                             }
                                         }
