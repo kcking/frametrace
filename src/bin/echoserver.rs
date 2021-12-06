@@ -383,17 +383,17 @@ impl Handler<ClientMessage> for EchoConnection {
                                             if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
                                                 let slice = &vp8_frame[..];
                                                 let parsed =
-                                                    frametrace::FrameTag::parse(slice).finish();
+                                                    frametrace::vp8::FrameTag::parse(slice).finish();
                                                 if let Ok(parsed) = parsed {
                                                     if matches!(
                                                         parsed.1.frame_type,
-                                                        frametrace::FrameTagType::KeyFrame { .. }
+                                                        frametrace::vp8::FrameTagType::KeyFrame { .. }
                                                     ) {
                                                         dbg!(&parsed.1);
                                                     }
 
                                                     if let Ok(frame_header) =
-                                                        frametrace::FrameHeader::parse(
+                                                        frametrace::vp8::FrameHeader::parse(
                                                             parsed.1.frame_type,
                                                             parsed.0,
                                                         )
