@@ -76,6 +76,6 @@ After browsing [mediasoup DirectTransport](https://docs.rs/mediasoup/0.9.0/media
 
 - Decided to write own VP8 parser after not finding anything in rust-land. Got stuck for a while on the fact that the keyframe header bit is an _inverse_ bit (0 = keyframe, 1 = interframe). Maybe it should be called a not_key_frame bit ;)
 
+- After finishing the vp8 parser, I was hoping to have some way to test it against a well-known implementation. I first tried using Wireshark by sending the decrypted RTP packets locally, but Wireshark's vp8 parser only reads the frame tag and not the full frame header (which specifies the frame buffers that are updated). I searched for vp8 test vectors online, but only found a mapping of vp8 frames -> MD5 hashes of the decoded image in [this repo](https://github.com/webmproject/vp8-test-vectors). Looking at the libvpx [decode function](https://github.com/webmproject/libvpx/blob/705bf9de8c96cfe5301451f1d7e5c90a41c64e5f/vp8/decoder/decodeframe.c#L879) itself, it actually looks like parsing and decoding are coupled in one function. The parsed frame header is actually available after decoding, so maybe I can run libvpx in parallel and compare the output to my parser. However this is proving difficult because the C headers abstract over vp8/9 and dont readily expose the parsed frame header details.
 
-
-
+- In reading through libvpx more, it looks like there is an exposed way to get [reference frame update information](https://github.com/webmproject/libvpx/blob/4478c121f592461318e2c0bd55b5c63a5e0012b2/vp8/vp8_dx_iface.c#L622)

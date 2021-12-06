@@ -380,6 +380,8 @@ impl Handler<ClientMessage> for EchoConnection {
                                         if let Ok(vp8_frame) = vp8_pkt.depacketize(
                                             &bytes::Bytes::from(parsed_rtp.payload.to_vec()),
                                         ) {
+                                            std::fs::write("test_frames/first_frame.vp8", &vp8_frame);
+                                            panic!("done");
                                             if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
                                                 let slice = &vp8_frame[..];
                                                 let parsed =
