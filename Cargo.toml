@@ -9,19 +9,18 @@ edition = "2021"
 actix = "0.10.0"
 actix-web = "3.3.2"
 actix-web-actors = "3.0.0"
-bitvec = "0.22.3"
 bytes = "1.1.0"
 env_logger = "0.9.0"
 get_if_addrs = "0.5.3"
 mediasoup = { version = "0.9.0", path = "../mediasoup/rust" }
 nom = "7.1.0"
-nom-bitvec = "0.2.0"
 rtp = "0.6.2"
 serde = "1.0.130"
 serde_json = "1.0.72"
 webrtc-util = "0.5.2"
+anyhow = "1.0.51"
 
+[dev-dependencies]
 libvpx = { git = "https://github.com/kcking/vpx-rs" }
 vpx-sys = { git = "https://github.com/kcking/vpx-rs" }
 bincode = "2.0.0-alpha.1"
-anyhow = "1.0.51"

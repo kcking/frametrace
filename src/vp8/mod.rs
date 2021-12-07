@@ -21,10 +21,7 @@ pub struct FrameTag {
     pub first_part_size: u32, // 19 bits
 }
 
-use nom::{
-    number::complete::{le_u16, le_u24},
-    Finish,
-};
+use nom::number::complete::{le_u16, le_u24};
 
 use self::bitcode::BoolDecoder;
 
@@ -129,7 +126,6 @@ impl FrameHeader {
             let update_segment_feature_data = decoder.read_bit()?;
             if update_segment_feature_data {
                 let _segment_feature_mode = decoder.read_bit()?;
-                let mut data = data;
                 for _ in 0..4 {
                     skip_opt_field(&mut decoder, 8)?;
                 }

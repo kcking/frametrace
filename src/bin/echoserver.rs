@@ -3,18 +3,14 @@ use actix::prelude::*;
 use actix_web::web::{Data, Payload};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use bitvec::order::{Lsb0, Msb0};
-use bitvec::view::BitView;
 use mediasoup::prelude::*;
 use mediasoup::worker::{WorkerLogLevel, WorkerLogTag};
 use nom::Finish;
-use nom_bitvec::BSlice;
 use rtp::codecs::vp8::Vp8Packet;
 use rtp::packetizer::Depacketizer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::num::{NonZeroU32, NonZeroU8};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use webrtc_util::Unmarshal;
 
 /// List of codecs that SFU will accept from clients
