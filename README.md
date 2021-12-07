@@ -33,7 +33,11 @@ cargo run
 
 4. Video frame logs will be streamed to `$PWD/video_log.json`
 
+## Devlog
+
+Notes taken along the way can be found in [the devlog](devlog.md).
+
 ## Future Work
 
 - handle out-of-order RTP packets (I'm not sure if MediaSoup is doing any sort of rtx/reordering under the hood for direct transports)
-- add more fields/information about vp8 frames (i.e. bitrate, #partitions, probably many other things)
+- add more fields/information about vp8 frames (i.e. bitrate, num partitions, probably many other things)
