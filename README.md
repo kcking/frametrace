@@ -14,7 +14,7 @@
 
 ## How to run the example
 
-> Tested on native Windows and MacOS
+> Tested on WSL and MacOS (native windows unsupported).
 
 1. Start the local web server
 
