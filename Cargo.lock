@@ -1327,7 +1327,7 @@ dependencies = [
 [[package]]
 name = "libvpx"
 version = "0.1.1"
-source = "git+https://github.com/kcking/vpx-rs#3ba556f388da333cc3991a394268cba293f5c185"
+source = "git+https://github.com/kcking/vpx-rs#2707b81a74d4e5dcd10c91ae0903002cfe8b7e3c"
 dependencies = [
  "av-codec",
  "av-data",
@@ -1395,6 +1395,7 @@ checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 [[package]]
 name = "mediasoup"
 version = "0.9.0"
+source = "git+https://github.com/kcking/mediasoup?branch=v3#622a74db4a7c0179a6d19126b7d76f4a9fbe86e1"
 dependencies = [
  "async-channel",
  "async-executor",
@@ -1424,6 +1425,7 @@ dependencies = [
 [[package]]
 name = "mediasoup-sys"
 version = "0.3.0"
+source = "git+https://github.com/kcking/mediasoup?branch=v3#622a74db4a7c0179a6d19126b7d76f4a9fbe86e1"
 
 [[package]]
 name = "memchr"
@@ -2560,7 +2562,7 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 [[package]]
 name = "vpx-sys"
 version = "0.1.1"
-source = "git+https://github.com/kcking/vpx-rs#3ba556f388da333cc3991a394268cba293f5c185"
+source = "git+https://github.com/kcking/vpx-rs#2707b81a74d4e5dcd10c91ae0903002cfe8b7e3c"
 dependencies = [
  "bindgen",
  "system-deps",
