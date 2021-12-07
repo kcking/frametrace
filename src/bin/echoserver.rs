@@ -5,13 +5,9 @@ use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use mediasoup::prelude::*;
 use mediasoup::worker::{WorkerLogLevel, WorkerLogTag};
-use nom::Finish;
-use rtp::codecs::vp8::Vp8Packet;
-use rtp::packetizer::Depacketizer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::num::{NonZeroU32, NonZeroU8};
-use webrtc_util::Unmarshal;
 
 /// List of codecs that SFU will accept from clients
 fn media_codecs() -> Vec<RtpCodecCapability> {
@@ -373,7 +369,7 @@ impl Handler<ClientMessage> for EchoConnection {
                                     std::fs::File::create("video_log.json").unwrap(),
                                 );
                                 let handler = tracer_consumer.on_rtp(move |pkt| {
-                                    logger.try_send(pkt.to_vec());
+                                    let _ = logger.try_send(pkt.to_vec());
                                 });
 
                                 //  TODO: manage lifecycle of these
