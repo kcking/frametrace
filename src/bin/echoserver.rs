@@ -423,7 +423,7 @@ impl Handler<ClientMessage> for EchoConnection {
                                                             parsed.0,
                                                         )
                                                     {
-                                                        dbg!(frame_header.1);
+                                                        dbg!(frame_header);
                                                     }
                                                 }
                                             } else {

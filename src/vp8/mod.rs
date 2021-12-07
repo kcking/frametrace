@@ -7,9 +7,7 @@ impl FrameInfo {
     pub fn parse(data: &[u8]) -> anyhow::Result<Self> {
         let (data, tag) = FrameTag::parse(data)
             .map_err(|e| anyhow::anyhow!("error parsing header {:?}", e.map(|e| e.code)))?;
-        let (_data, header) = FrameHeader::parse(tag.frame_type.clone(), data)
-            .finish()
-            .map_err(|e| anyhow::anyhow!("error parsing header {:?}", e.code))?;
+        let header = FrameHeader::parse(tag.frame_type.clone(), data)?;
 
         Ok(Self { tag, header })
     }
@@ -27,6 +25,8 @@ use nom::{
     number::complete::{le_u16, le_u24},
     Finish,
 };
+
+use self::bitcode::BoolDecoder;
 
 impl FrameTag {
     pub fn parse(data: &[u8]) -> nom::IResult<&[u8], Self> {
@@ -103,143 +103,96 @@ pub struct FrameBufferUpdate {
     altref: bool,
 }
 
-type Bits<'a> = (&'a [u8], usize);
-
-fn take_bool(data: Bits) -> nom::IResult<Bits, bool> {
-    let (data, b): (_, u8) = nom::bits::complete::take(1usize)(data)?;
-
-    Ok((data, b == 1))
-}
-
-fn skip_opt_field(data: Bits, field_size: usize) -> nom::IResult<Bits, ()> {
-    let (data, present) = take_bool(data)?;
-    Ok((
-        if present {
-            let (data, _skip): (_, u8) = nom::bits::complete::take(field_size)(data)?;
-            data
-        } else {
-            data
-        },
-        (),
-    ))
+fn skip_opt_field(decoder: &mut BoolDecoder, field_size: usize) -> std::io::Result<()> {
+    if decoder.read_bit()? {
+        let _skip = decoder.read_literal(field_size as u32)?;
+    }
+    Ok(())
 }
 
 impl FrameHeader {
-    pub fn parse(frame_type: FrameTagType, data: &[u8]) -> nom::IResult<Bits, Self> {
-        use nom::bits::complete::take;
-        let data = (data, 0usize);
+    pub fn parse(frame_type: FrameTagType, data: &[u8]) -> std::io::Result<Self> {
+        let mut decoder = bitcode::BoolDecoder::new(data)?;
 
-        let data = if frame_type.is_key_frame() {
-            let (data, _color_space) = take_bool(data)?;
+        if frame_type.is_key_frame() {
+            let _color_space = decoder.read_bit()?;
             if _color_space {
                 panic!("unsupported color space");
             }
-            let (data, _clamping_type) = take_bool(data)?;
-
-            data
-        } else {
-            data
+            let _clamping_type = decoder.read_bit()?;
         };
 
-        let (data, segmentation_enabled) = take_bool(data)?;
-        let data = if segmentation_enabled {
+        let segmentation_enabled = decoder.read_bit()?;
+        if segmentation_enabled {
             dbg!(segmentation_enabled);
-            let (data, update_mb_segmentation_map) = take_bool(data)?;
-            let (data, update_segment_feature_data) = take_bool(data)?;
-            let data = if update_segment_feature_data {
-                dbg!(update_segment_feature_data);
-                let (data, _segment_feature_mode) = take_bool(data)?;
+            let update_mb_segmentation_map = decoder.read_bit()?;
+            let update_segment_feature_data = decoder.read_bit()?;
+            if update_segment_feature_data {
+                let _segment_feature_mode = decoder.read_bit()?;
                 let mut data = data;
                 for _ in 0..4 {
-                    //  TODO: are these lengths right?
-                    //  https://datatracker.ietf.org/doc/html/rfc6386#section-9.3 mentions a feature length lookup table
-                    data = skip_opt_field(data, 8)?.0;
+                    skip_opt_field(&mut decoder, 8)?;
                 }
 
                 for _ in 0..4 {
-                    data = skip_opt_field(data, 7)?.0;
-                }
-
-                data
-            } else {
-                data
-            };
-
-            let data = if update_mb_segmentation_map {
-                dbg!(update_mb_segmentation_map);
-                let mut data = data;
-                for _ in 0..3 {
-                    data = skip_opt_field(data, 8)?.0;
-                }
-                data
-            } else {
-                data
-            };
-
-            data
-        } else {
-            data
-        };
-
-        let (data, _filter_type) = take_bool(data)?;
-        let (data, _loop_filter_level): (_, u8) = take(6usize)(data)?;
-        let (data, _sharpness_level): (_, u8) = take(3usize)(data)?;
-
-        let (data, loop_filter_adj_enable) = take_bool(data)?;
-        let data = if loop_filter_adj_enable {
-            let (mut data, mode_ref_lf_delta_update) = take_bool(data)?;
-            if mode_ref_lf_delta_update {
-                for _ in 0..4 {
-                    data = skip_opt_field(data, 7)?.0;
-                }
-                for _ in 0..4 {
-                    data = skip_opt_field(data, 7)?.0;
+                    skip_opt_field(&mut decoder, 7)?;
                 }
             }
-            data
-        } else {
-            data
-        };
 
-        let (data, _log2_nbr_of_dct_partitions): (_, u8) = take(2usize)(data)?;
-        let (data, _y_ac_qi): (_, u8) = take(7usize)(data)?;
-        let mut data = data;
-        for _ in 0..5 {
-            data = skip_opt_field(data, 5)?.0;
+            if update_mb_segmentation_map {
+                dbg!(update_mb_segmentation_map);
+                for _ in 0..3 {
+                    skip_opt_field(&mut decoder, 8)?;
+                }
+            }
         }
 
-        let (data, frame_buffer_update) = if frame_type.is_key_frame() {
-            let (data, _refresh_entropy_probs) = take_bool(data)?;
-            (
-                data,
-                FrameBufferUpdate {
-                    golden: true,
-                    altref: true,
-                },
-            )
+        let _filter_type = decoder.read_bit()?;
+        let _loop_filter_level = decoder.read_literal(6)?;
+        let _sharpness_level = decoder.read_literal(3)?;
+
+        let loop_filter_adj_enable = decoder.read_bit()?;
+        if loop_filter_adj_enable {
+            let mode_ref_lf_delta_update = decoder.read_bit()?;
+            if mode_ref_lf_delta_update {
+                for _ in 0..4 {
+                    skip_opt_field(&mut decoder, 7)?;
+                }
+                for _ in 0..4 {
+                    skip_opt_field(&mut decoder, 7)?;
+                }
+            }
+        }
+
+        let _log2_nbr_of_dct_partitions = decoder.read_literal(2)?;
+        let _y_ac_qi = decoder.read_literal(7)?;
+        for _ in 0..5 {
+            skip_opt_field(&mut decoder, 5)?;
+        }
+
+        let frame_buffer_update = if frame_type.is_key_frame() {
+            let _refresh_entropy_probs = decoder.read_bit()?;
+            FrameBufferUpdate {
+                golden: true,
+                altref: true,
+            }
         } else {
-            let (data, refresh_golden) = take_bool(data)?;
-            let (data, refresh_altref) = take_bool(data)?;
+            let refresh_golden = decoder.read_bit()?;
+            let refresh_altref = decoder.read_bit()?;
             //  TODO: more fields here
 
-            (
-                data,
-                FrameBufferUpdate {
-                    golden: refresh_golden,
-                    altref: refresh_altref,
-                },
-            )
+            FrameBufferUpdate {
+                golden: refresh_golden,
+                altref: refresh_altref,
+            }
         };
 
-        Ok((
-            data,
-            Self {
-                frame_buffer_update,
-            },
-        ))
+        Ok(Self {
+            frame_buffer_update,
+        })
     }
 }
 
+mod bitcode;
 #[cfg(test)]
 mod testing;
-mod bitcode;

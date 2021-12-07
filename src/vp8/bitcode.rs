@@ -1,7 +1,7 @@
 /// Arithmetic bit-coding from https://datatracker.ietf.org/doc/html/rfc6386#section-7
 use std::io::Read;
 
-struct BoolEncoder {
+pub struct BoolEncoder {
     output: Vec<u8>,
     range: u32,
     bottom: u32,
@@ -9,7 +9,7 @@ struct BoolEncoder {
 }
 
 impl BoolEncoder {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             output: vec![],
             range: 255,
@@ -31,7 +31,7 @@ impl BoolEncoder {
         }
     }
 
-    fn write_bool(&mut self, prob: u32, value: u8) {
+    pub fn write_bool(&mut self, prob: u32, value: u8) {
         let split: u32 = 1 + (((self.range - 1) * prob) >> 8);
 
         if value != 0 {
@@ -63,7 +63,7 @@ impl BoolEncoder {
         }
     }
 
-    fn flush(mut self) -> Vec<u8> {
+    pub fn flush(mut self) -> Vec<u8> {
         let mut c: i32 = self.bit_count;
         let mut v = self.bottom;
 
@@ -98,7 +98,7 @@ impl BoolEncoder {
     }
 }
 
-struct BoolDecoder<'a> {
+pub struct BoolDecoder<'a> {
     input: std::io::Cursor<&'a [u8]>,
     range: u32,
     value: u32,
@@ -106,7 +106,7 @@ struct BoolDecoder<'a> {
 }
 
 impl<'a> BoolDecoder<'a> {
-    fn new(input: &'a [u8]) -> std::io::Result<Self> {
+    pub fn new(input: &'a [u8]) -> std::io::Result<Self> {
         let mut input = std::io::Cursor::new(input);
 
         let mut first_2 = [0u8; 2];
@@ -120,8 +120,12 @@ impl<'a> BoolDecoder<'a> {
         })
     }
 
+    pub fn read_bit(&mut self) -> std::io::Result<bool> {
+        self.read_bool(128)
+    }
+
     #[allow(non_snake_case)]
-    fn read_bool(&mut self, prob: u32) -> std::io::Result<u8> {
+    pub fn read_bool(&mut self, prob: u32) -> std::io::Result<bool> {
         let split: u32 = 1 + (((self.range - 1) * prob) >> 8);
         let SPLIT: u32 = split << 8;
 
@@ -149,10 +153,10 @@ impl<'a> BoolDecoder<'a> {
                 self.value |= next_byte[0] as u32;
             }
         }
-        Ok(retval)
+        Ok(retval != 0)
     }
 
-    fn read_literal(&mut self, num_bits: u32) -> std::io::Result<u32> {
+    pub fn read_literal(&mut self, num_bits: u32) -> std::io::Result<u32> {
         let mut v: u32 = 0;
 
         for _ in 0..num_bits {
@@ -162,12 +166,12 @@ impl<'a> BoolDecoder<'a> {
         Ok(v)
     }
 
-    fn read_signed_literal(&mut self, num_bits: u32) -> std::io::Result<i32> {
+    pub fn read_signed_literal(&mut self, num_bits: u32) -> std::io::Result<i32> {
         let mut v: i32 = 0;
         if num_bits == 0 {
             return Ok(0);
         }
-        if self.read_bool(128)? != 0 {
+        if self.read_bool(128)? {
             v = -1;
         }
         for _ in 0..num_bits {
@@ -179,11 +183,14 @@ impl<'a> BoolDecoder<'a> {
 
 #[test]
 fn roundtrip() {
-    let d = vec![0u8, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1];
+    let d = vec![0u8, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1]
+        .into_iter()
+        .map(|b| b != 0)
+        .collect::<Vec<_>>();
 
     let mut encoder = BoolEncoder::new();
     for d in d.iter() {
-        encoder.write_bool(128, *d);
+        encoder.write_bool(128, *d as u8);
     }
 
     let out = encoder.flush();
