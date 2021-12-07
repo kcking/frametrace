@@ -372,12 +372,6 @@ impl Handler<ClientMessage> for EchoConnection {
                                 .consume(ConsumerOptions::new(id, vp8_only_caps))
                                 .await
                             {
-                                let frames = std::sync::Arc::new(std::sync::Mutex::new(Vec::<
-                                    Vec<u8>,
-                                >::new(
-                                )));
-                                let current_frame =
-                                    std::sync::Arc::new(std::sync::Mutex::new(Vec::<u8>::new()));
                                 println!("tracer consumer created: {:?}", tracer_consumer.id());
                                 let handler = tracer_consumer.on_rtp(move |pkt| {
                                     let mut buf = bytes::Bytes::from(pkt.to_vec());
@@ -388,24 +382,6 @@ impl Handler<ClientMessage> for EchoConnection {
                                             &bytes::Bytes::from(parsed_rtp.payload.to_vec()),
                                         ) {
                                             if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
-                                                let mut current_frame = current_frame.lock().unwrap();
-                                                let mut frames = frames.lock().unwrap();
-                                                if !current_frame.is_empty() {
-                                                    frames.push(current_frame.clone());
-                                                    current_frame.clear();
-                                                }
-                                                current_frame.extend_from_slice(&vp8_frame);
-                                                if frames.len() > 30 {
-
-                                                    use bincode::{Encode, Decode};
-                                                    #[derive(Encode, Decode)]
-                                                    struct TestFrames {
-                                                        frames: Vec<Vec<u8>>,
-                                                    }
-
-                                                    std::fs::write("test_frames.vp8", &bincode::encode_to_vec(TestFrames{frames: frames.clone() }, bincode::config::Configuration::standard()).unwrap());
-                                                    panic!("done");
-                                                }
                                                 let slice = &vp8_frame[..];
                                                 let parsed =
                                                     frametrace::vp8::FrameTag::parse(slice).finish();
@@ -426,9 +402,7 @@ impl Handler<ClientMessage> for EchoConnection {
                                                         dbg!(frame_header);
                                                     }
                                                 }
-                                            } else {
-                                                current_frame.lock().unwrap().extend_from_slice(&vp8_frame);
-                                            }
+                                            } 
                                         }
                                     }
                                 });

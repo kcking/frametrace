@@ -1,3 +1,4 @@
+#![allow(unused)]
 /// Arithmetic bit-coding from https://datatracker.ietf.org/doc/html/rfc6386#section-7
 use std::io::Read;
 
