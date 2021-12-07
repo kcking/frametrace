@@ -41,3 +41,7 @@ Notes taken along the way can be found in [the devlog](devlog.md).
 
 - handle out-of-order RTP packets (I'm not sure if MediaSoup is doing any sort of rtx/reordering under the hood for direct transports)
 - add more fields/information about vp8 frames (i.e. bitrate, num partitions, probably many other things)
+
+## libvpx tests
+
+The VP8 parser can be tested against libvpx using `cargo test`. Note that libvpx must be present on the machine and findable by the [system_deps](https://crates.io/crates/system-deps) crate.
