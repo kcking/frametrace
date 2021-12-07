@@ -1,4 +1,7 @@
 /// from https://github.com/versatica/mediasoup/blob/cab4e34d4665bc3fbaa6917858cf3af9675fffca/rust/examples/echo.rs
+/// The vast majority of this file is from the above example. The most relevant
+/// changes I made are calling frametrace::spawn_rtp_logger` and gathering local ip
+/// addresses with `get_if_addrs`.
 use actix::prelude::*;
 use actix_web::web::{Data, Payload};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
