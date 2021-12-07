@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{io::Write, sync::mpsc::sync_channel};
 
 use rtp::{codecs::vp8::Vp8Packet, packetizer::Depacketizer};
 use serde::Serialize;
@@ -68,7 +68,7 @@ impl RtpVp8FrameInfo {
 pub fn spawn_rtp_logger<W: Write + Send + Sync + 'static>(
     mut w: W,
 ) -> std::sync::mpsc::SyncSender<Vec<u8>> {
-    let (tx, rx) = sync_channel(128);
+    let (tx, rx) = sync_channel::<Vec<u8>>(128);
 
     std::thread::spawn(move || {
         while let Ok(rtp_pkt) = rx.recv() {
