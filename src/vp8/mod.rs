@@ -86,6 +86,29 @@ impl FrameTagType {
     pub fn is_key_frame(&self) -> bool {
         matches!(self, FrameTagType::KeyFrame { .. })
     }
+    pub fn resolution(&self) -> Option<(u32, u32)> {
+        match self {
+            FrameTagType::KeyFrame {
+                width,
+                width_scale,
+                height,
+                height_scale,
+            } => Some((
+                scale_dimension(*width as u32, *width_scale),
+                scale_dimension(*height as u32, *height_scale),
+            )),
+            FrameTagType::InterFrame => None,
+        }
+    }
+}
+
+fn scale_dimension(dimension: u32, scale_flag: u8) -> u32 {
+    match scale_flag {
+        1 => dimension * 5 / 4,
+        2 => dimension * 5 / 3,
+        3 => dimension * 2,
+        _ => dimension,
+    }
 }
 
 ///  https://datatracker.ietf.org/doc/html/rfc6386#section-19.2
@@ -96,8 +119,8 @@ pub struct FrameHeader {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FrameBufferUpdate {
-    golden: bool,
-    altref: bool,
+    pub golden: bool,
+    pub altref: bool,
 }
 
 fn skip_opt_field(decoder: &mut BoolDecoder, field_size: usize) -> std::io::Result<()> {
@@ -121,7 +144,6 @@ impl FrameHeader {
 
         let segmentation_enabled = decoder.read_bit()?;
         if segmentation_enabled {
-            dbg!(segmentation_enabled);
             let update_mb_segmentation_map = decoder.read_bit()?;
             let update_segment_feature_data = decoder.read_bit()?;
             if update_segment_feature_data {
@@ -136,7 +158,6 @@ impl FrameHeader {
             }
 
             if update_mb_segmentation_map {
-                dbg!(update_mb_segmentation_map);
                 for _ in 0..3 {
                     skip_opt_field(&mut decoder, 8)?;
                 }

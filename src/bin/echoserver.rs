@@ -369,38 +369,11 @@ impl Handler<ClientMessage> for EchoConnection {
                                 .await
                             {
                                 println!("tracer consumer created: {:?}", tracer_consumer.id());
+                                let logger = frametrace::spawn_rtp_logger(
+                                    std::fs::File::create("video_log.json").unwrap(),
+                                );
                                 let handler = tracer_consumer.on_rtp(move |pkt| {
-                                    let mut buf = bytes::Bytes::from(pkt.to_vec());
-                                    if let Ok(parsed_rtp) = rtp::packet::Packet::unmarshal(&mut buf)
-                                    {
-                                        let mut vp8_pkt = Vp8Packet::default();
-                                        if let Ok(vp8_frame) = vp8_pkt.depacketize(
-                                            &bytes::Bytes::from(parsed_rtp.payload.to_vec()),
-                                        ) {
-                                            if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
-                                                let slice = &vp8_frame[..];
-                                                let parsed =
-                                                    frametrace::vp8::FrameTag::parse(slice).finish();
-                                                if let Ok(parsed) = parsed {
-                                                    if matches!(
-                                                        parsed.1.frame_type,
-                                                        frametrace::vp8::FrameTagType::KeyFrame { .. }
-                                                    ) {
-                                                        dbg!(&parsed.1);
-                                                    }
-
-                                                    if let Ok(frame_header) =
-                                                        frametrace::vp8::FrameHeader::parse(
-                                                            parsed.1.frame_type,
-                                                            parsed.0,
-                                                        )
-                                                    {
-                                                        dbg!(frame_header);
-                                                    }
-                                                }
-                                            } 
-                                        }
-                                    }
+                                    logger.try_send(pkt.to_vec());
                                 });
 
                                 //  TODO: manage lifecycle of these
