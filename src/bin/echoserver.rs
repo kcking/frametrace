@@ -350,6 +350,7 @@ impl Handler<ClientMessage> for EchoConnection {
                             println!("{:?} producer created: {}", kind, id);
 
                             let mut vp8_only_caps = rtp_caps.clone();
+                            //  only logging vp8 is currently supported
                             vp8_only_caps.codecs.retain(|codec| {
                                 matches!(
                                     codec,

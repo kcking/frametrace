@@ -31,6 +31,8 @@ cargo run
 
 3. Navigate to [http://localhost:3001](http://localhost:3001) in a web browser.
 
+4. Video frame logs will be streamed to `$PWD/video_log.json`
+
 ## Future Work
 
 - handle out-of-order RTP packets (I'm not sure if MediaSoup is doing any sort of rtx/reordering under the hood for direct transports)

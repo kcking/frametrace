@@ -6,34 +6,35 @@ use webrtc_util::Unmarshal;
 
 pub mod vp8;
 
+/// Structure of a video log line (json)
 #[derive(Serialize)]
-struct FrameLogLine {
-    rtp_sequence_number: u16,
-    pts: u32,
-    picture_id: Option<u16>,
+pub struct FrameLogLine {
+    pub rtp_sequence_number: u16,
+    pub pts: u32,
+    pub picture_id: Option<u16>,
     //  only set on keyframes, could remember last frame's resolution but then dropped frames wouldn't be accounted for
-    resolution: Option<(u32, u32)>,
-    show_frame: bool,
-    keyframe: bool,
-    modify_golden_frame: bool,
-    modify_altref_frame: bool,
+    pub resolution: Option<(u32, u32)>,
+    pub show_frame: bool,
+    pub keyframe: bool,
+    pub modify_golden_frame: bool,
+    pub modify_altref_frame: bool,
 }
 
-struct RtpVp8FrameInfo {
+/// Handles parsing RTP packets down through VP8 compressed frame header
+pub struct RtpVp8FrameInfo {
     rtp_header: rtp::header::Header,
     vp8_rtp_header: Vp8Packet,
     vp8_frame: vp8::FrameInfo,
 }
 
 impl RtpVp8FrameInfo {
-    fn parse(mut pkt: &[u8]) -> anyhow::Result<Option<Self>> {
+    pub fn parse(mut pkt: &[u8]) -> anyhow::Result<Option<Self>> {
         let rtp_packet = rtp::packet::Packet::unmarshal(&mut pkt)?;
 
         let mut vp8_pkt = Vp8Packet::default();
         let vp8_frame = vp8_pkt.depacketize(&bytes::Bytes::from(rtp_packet.payload.to_vec()))?;
 
         if vp8_pkt.s == 1 && vp8_pkt.pid == 0 {
-            // vp8_pkt.
             let frame_info = vp8::FrameInfo::parse(&vp8_frame)?;
             Ok(Some(Self {
                 vp8_rtp_header: vp8_pkt,
@@ -45,7 +46,7 @@ impl RtpVp8FrameInfo {
         }
     }
 
-    fn to_log_line(&self) -> FrameLogLine {
+    pub fn to_log_line(&self) -> FrameLogLine {
         FrameLogLine {
             rtp_sequence_number: self.rtp_header.sequence_number,
             pts: self.rtp_header.timestamp,
@@ -63,10 +64,12 @@ impl RtpVp8FrameInfo {
     }
 }
 
+/// Spawns a thread that listens to the returned Sender, writing logs to the provided `w`.
 pub fn spawn_rtp_logger<W: Write + Send + Sync + 'static>(
     mut w: W,
 ) -> std::sync::mpsc::SyncSender<Vec<u8>> {
-    let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(128);
+    let (tx, rx) = sync_channel(128);
+
     std::thread::spawn(move || {
         while let Ok(rtp_pkt) = rx.recv() {
             match RtpVp8FrameInfo::parse(&rtp_pkt) {
