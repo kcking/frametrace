@@ -1,3 +1,20 @@
+pub struct FrameInfo {
+    pub tag: FrameTag,
+    pub header: FrameHeader,
+}
+
+impl FrameInfo {
+    pub fn parse(data: &[u8]) -> anyhow::Result<Self> {
+        let (data, tag) = FrameTag::parse(data)
+            .map_err(|e| anyhow::anyhow!("error parsing header {:?}", e.map(|e| e.code)))?;
+        let (_data, header) = FrameHeader::parse(tag.frame_type.clone(), data)
+            .finish()
+            .map_err(|e| anyhow::anyhow!("error parsing header {:?}", e.code))?;
+
+        Ok(Self { tag, header })
+    }
+}
+
 #[derive(Debug)]
 pub struct FrameTag {
     pub frame_type: FrameTagType,
@@ -6,7 +23,10 @@ pub struct FrameTag {
     pub first_part_size: u32, // 19 bits
 }
 
-use nom::number::complete::{le_u16, le_u24};
+use nom::{
+    number::complete::{le_u16, le_u24},
+    Finish,
+};
 
 impl FrameTag {
     pub fn parse(data: &[u8]) -> nom::IResult<&[u8], Self> {
@@ -72,15 +92,15 @@ impl FrameTagType {
 }
 
 ///  https://datatracker.ietf.org/doc/html/rfc6386#section-19.2
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FrameHeader {
     pub frame_buffer_update: FrameBufferUpdate,
 }
 
-#[derive(Debug, Clone)]
-pub enum FrameBufferUpdate {
-    KeyFrame,
-    InterFrame { golden: bool, altref: bool },
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FrameBufferUpdate {
+    golden: bool,
+    altref: bool,
 }
 
 type Bits<'a> = (&'a [u8], usize);
@@ -111,6 +131,9 @@ impl FrameHeader {
 
         let data = if frame_type.is_key_frame() {
             let (data, _color_space) = take_bool(data)?;
+            if _color_space {
+                panic!("unsupported color space");
+            }
             let (data, _clamping_type) = take_bool(data)?;
 
             data
@@ -120,12 +143,16 @@ impl FrameHeader {
 
         let (data, segmentation_enabled) = take_bool(data)?;
         let data = if segmentation_enabled {
+            dbg!(segmentation_enabled);
             let (data, update_mb_segmentation_map) = take_bool(data)?;
             let (data, update_segment_feature_data) = take_bool(data)?;
             let data = if update_segment_feature_data {
+                dbg!(update_segment_feature_data);
                 let (data, _segment_feature_mode) = take_bool(data)?;
                 let mut data = data;
                 for _ in 0..4 {
+                    //  TODO: are these lengths right?
+                    //  https://datatracker.ietf.org/doc/html/rfc6386#section-9.3 mentions a feature length lookup table
                     data = skip_opt_field(data, 8)?.0;
                 }
 
@@ -139,6 +166,7 @@ impl FrameHeader {
             };
 
             let data = if update_mb_segmentation_map {
+                dbg!(update_mb_segmentation_map);
                 let mut data = data;
                 for _ in 0..3 {
                     data = skip_opt_field(data, 8)?.0;
@@ -182,7 +210,13 @@ impl FrameHeader {
 
         let (data, frame_buffer_update) = if frame_type.is_key_frame() {
             let (data, _refresh_entropy_probs) = take_bool(data)?;
-            (data, FrameBufferUpdate::KeyFrame)
+            (
+                data,
+                FrameBufferUpdate {
+                    golden: true,
+                    altref: true,
+                },
+            )
         } else {
             let (data, refresh_golden) = take_bool(data)?;
             let (data, refresh_altref) = take_bool(data)?;
@@ -190,7 +224,7 @@ impl FrameHeader {
 
             (
                 data,
-                FrameBufferUpdate::InterFrame {
+                FrameBufferUpdate {
                     golden: refresh_golden,
                     altref: refresh_altref,
                 },
@@ -208,3 +242,4 @@ impl FrameHeader {
 
 #[cfg(test)]
 mod testing;
+mod bitcode;

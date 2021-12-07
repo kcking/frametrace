@@ -23,3 +23,5 @@ webrtc-util = "0.5.2"
 
 libvpx = { git = "https://github.com/kcking/vpx-rs" }
 vpx-sys = { git = "https://github.com/kcking/vpx-rs" }
+bincode = "2.0.0-alpha.1"
+anyhow = "1.0.51"

@@ -4,20 +4,23 @@ use vpx_sys::VPX_DECODER_ABI_VERSION;
 
 use super::FrameBufferUpdate;
 
+#[derive(bincode::Encode, bincode::Decode)]
+struct TestFrames {
+    frames: Vec<Vec<u8>>,
+}
+
 struct Vp8TestDecoder {
-    dec_interface: *mut vpx_sys::vpx_codec_iface,
     ctx: vpx_sys::vpx_codec_ctx_t,
 }
 
 impl Vp8TestDecoder {
     pub fn new() -> Self {
-        let dec_interface = unsafe { vpx_sys::vpx_codec_vp8_dx() };
         let mut codec: MaybeUninit<vpx_sys::vpx_codec_ctx_t> = MaybeUninit::uninit();
 
         let codec = unsafe {
             vpx_sys::vpx_codec_dec_init_ver(
                 codec.as_mut_ptr(),
-                dec_interface,
+                vpx_sys::vpx_codec_vp8_dx(),
                 null_mut(),
                 0,
                 VPX_DECODER_ABI_VERSION as i32,
@@ -25,49 +28,46 @@ impl Vp8TestDecoder {
             codec.assume_init()
         };
 
-        Self {
-            dec_interface,
-            ctx: codec,
-        }
+        Self { ctx: codec }
     }
 
     pub fn analyze_frame(&mut self, frame: &[u8]) -> FrameBufferUpdate {
         let mut ref_update_flag = 0i32;
 
         unsafe {
-            assert!(
+            assert_eq!(
                 vpx_sys::vpx_codec_decode(
                     &mut self.ctx,
                     frame.as_ptr(),
                     frame.len() as u32,
                     null_mut(),
                     1,
-                ) as u32
-                    != 0
+                ),
+                vpx_sys::vpx_codec_err_t::VPX_CODEC_OK
             );
 
-            vpx_sys::vpx_codec_control_(
-                &mut self.ctx,
-                vpx_sys::vp8_dec_control_id::VP8D_GET_LAST_REF_UPDATES as i32,
-                &mut ref_update_flag,
+            assert_eq!(
+                vpx_sys::vpx_codec_control_(
+                    &mut self.ctx,
+                    vpx_sys::vp8_dec_control_id::VP8D_GET_LAST_REF_UPDATES as i32,
+                    &mut ref_update_flag,
+                ),
+                vpx_sys::vpx_codec_err_t::VPX_CODEC_OK
             );
         }
 
-        let last_frame_updated =
+        let _last_frame_updated =
             (ref_update_flag & vpx_sys::vpx_ref_frame_type::VP8_LAST_FRAME as i32) > 0;
         let alt_frame_updated =
             (ref_update_flag & vpx_sys::vpx_ref_frame_type::VP8_ALTR_FRAME as i32) > 0;
         let gold_frame_updated =
             (ref_update_flag & vpx_sys::vpx_ref_frame_type::VP8_GOLD_FRAME as i32) > 0;
 
-        dbg!((last_frame_updated, alt_frame_updated, gold_frame_updated));
+        dbg!(ref_update_flag);
 
-        match (alt_frame_updated, gold_frame_updated) {
-            (true, true) => FrameBufferUpdate::KeyFrame,
-            _ => FrameBufferUpdate::InterFrame {
-                altref: alt_frame_updated,
-                golden: gold_frame_updated,
-            },
+        FrameBufferUpdate {
+            golden: gold_frame_updated,
+            altref: alt_frame_updated,
         }
     }
 }
@@ -82,13 +82,39 @@ impl Drop for Vp8TestDecoder {
 
 #[test]
 fn vpx() {
-    unsafe {
-        let mut decoder = Vp8TestDecoder::new();
+    let frames: TestFrames = bincode::decode_from_slice(
+        &std::fs::read("test_frames.vp8").unwrap(),
+        bincode::config::Configuration::standard(),
+    )
+    .unwrap();
 
-        let first_frame = include_bytes!("../../test_frames/first_frame.vp8");
+    let mut decoder = Vp8TestDecoder::new();
 
-        let update = decoder.analyze_frame(first_frame);
+    let expected = frames
+        .frames
+        .iter()
+        .map(|f| decoder.analyze_frame(&f))
+        .collect::<Vec<_>>();
 
-        assert!(matches!(update, FrameBufferUpdate::KeyFrame));
-    }
+    let parsed = frames
+        .frames
+        .iter()
+        .map(|f| {
+            crate::vp8::FrameInfo::parse(&f)
+                .unwrap()
+                .header
+                .frame_buffer_update
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(expected, parsed);
+
+    // for (idx, frame) in frames.frames.into_iter().enumerate() {
+    //     eprintln!("testing frame {}", idx);
+    //     let expected = decoder.analyze_frame(&frame);
+
+    //     let parsed = crate::vp8::FrameInfo::parse(&frame).unwrap();
+
+    //     assert_eq!(parsed.header.frame_buffer_update, expected);
+    // }
 }

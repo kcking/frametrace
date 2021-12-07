@@ -490,6 +490,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bincode"
+version = "2.0.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f15e4a3f8ad2e4bc6c5a24233a3dcf1ad449857dd8fe76fa23f8ef6ea4cb4f7c"
+dependencies = [
+ "bincode_derive",
+]
+
+[[package]]
+name = "bincode_derive"
+version = "2.0.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbdb4d197bb44b42f71ab87dcade323bc0035196cafe268d916f959e1de88c9f"
+
+[[package]]
 name = "bindgen"
 version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -902,6 +917,8 @@ dependencies = [
  "actix",
  "actix-web",
  "actix-web-actors",
+ "anyhow",
+ "bincode",
  "bitvec",
  "bytes 1.1.0",
  "env_logger 0.9.0",
