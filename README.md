@@ -2,7 +2,7 @@
 
 > Debug VP8 RTP streams
 
-`frametrace` is a proof-of-concept library to output debug details of a RTP/VP8 stream. A working example of using `frametrace` with `mediasoup` is located in [src/bin/echoserverrs](src/bin/echoserver.rs). The `mediasoup` `echoserver` demo was chosen as a simple 1:1 webrtc call that only requires one person/browser tab to try out.
+`frametrace` is a proof-of-concept library to output debug details of a RTP/VP8 stream. A working example of using `frametrace` with `mediasoup` is located in [src/bin/echoserver.rs](src/bin/echoserver.rs). The `mediasoup` `echoserver` demo was chosen as a simple 1:1 webrtc call that only requires one person/browser tab to try out.
 
 ## Build requirements
 
@@ -29,7 +29,7 @@ yarn && yarn start
 cargo run
 ```
 
-3. Navigate to [http://localhost:3001] in a web browser.
+3. Navigate to [http://localhost:3001](http://localhost:3001) in a web browser.
 
 ## Future Work
 
